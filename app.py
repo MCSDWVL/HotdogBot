@@ -7,10 +7,6 @@ from bot_test_messages import BotTestMessages
 import bot_bank_functions as BotBank
 import setupdatabase as DatabaseHelper
 
-#import ssl as ssl_lib
-#import certifi
-
-#ssl_context = ssl_lib.create_default_context(cafile=certifi.where())
 
 # Initialize a Flask app to host the events adapter
 app = Flask(__name__)
@@ -19,13 +15,13 @@ slack_events_adapter = SlackEventAdapter(os.environ['SLACK_SIGNING_SECRET'], "/s
 # Initialize a Web API client
 slack_web_client = WebClient(token=os.environ['SLACK_BOT_TOKEN'])
 
-onboarding_tutorials_sent = {}
-
+# Track messages we've handled to try to not double handle them.
 handled_message_ids = set()
+
 
 # help command.
 def identify_yourself(user_id: str, channel: str):
-    # Post the onboarding message in Slack
+    # Post the help message in Slack
     response = slack_web_client.chat_postMessage(
         channel=channel, 
         text="""I'm an ordinary, dirty trash robot :robot_face: with a brain :brain: full of hot dogs :hotdog: and a body that says \"my body is full of hot dogs :hotdog: :hotdog: :hotdog:, please help.\"\n\n
@@ -39,6 +35,7 @@ def identify_yourself(user_id: str, channel: str):
         """
     )
 
+
 # creating a new account
 def add_new_user(user_id: str, channel: str):
     balance = BotBank.new_user(user_id)
@@ -46,6 +43,7 @@ def add_new_user(user_id: str, channel: str):
         channel=channel, 
         text=f"{user_id} has {balance} points"
     )
+
 
 # Debug respond to an event so you can see what is happening directly in slack.
 def debug_event(channel: str, payload):
@@ -59,9 +57,9 @@ def debug_event(channel: str, payload):
         text=f"full event:\n {event}"
     )
 
+
 # ================ Team Join Event =============== #
 # When the user first joins a team, the type of the event will be 'team_join'.
-# Here we'll link the onboarding_message callback to the 'team_join' event.
 @slack_events_adapter.on("team_join")
 def add_user(payload):
     # not implemented, debug event
@@ -70,18 +68,12 @@ def add_user(payload):
 
 
 # ============= Reaction Added Events ============= #
-# When a users adds an emoji reaction to the onboarding message,
-# the type of the event will be 'reaction_added'.
-# Here we'll link the update_emoji callback to the 'reaction_added' event.
+# When a users adds an emoji reaction, the type of the event will be 'reaction_added'.
 @slack_events_adapter.on("reaction_added")
 def update_emoji(payload):
-    """Update the onboarding welcome message after receiving a "reaction_added"
-    event from Slack. Update timestamp for welcome message as well.
-    """
     # not implemented, leaving as an example if I want to handle reactions
     event = payload.get("event", {})
     print(event)
-
 
 
 # =============== Pin Added Events ================ #
@@ -103,9 +95,11 @@ def message(payload):
     event = payload.get("event", {})
     print(event)
 
+
 # check if user is an admin of the workspace for access controlled commands.
 def is_admin(user_id):
     return slack_web_client.users_info(user=user_id).get("user").get("is_admin")
+
 
 # ============== Mention Events ============= #
 # here's the giant function of everything that happens when you @Bot
@@ -258,6 +252,7 @@ def handle_message(payload):
                 text=f"Adding {user_name} with ${newbalance}"
             )
         return
+
 
 if __name__ == "__main__":
     logger = logging.getLogger()
