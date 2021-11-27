@@ -23,6 +23,7 @@ onboarding_tutorials_sent = {}
 
 handled_message_ids = set()
 
+# help command.
 def identify_yourself(user_id: str, channel: str):
     # Post the onboarding message in Slack
     response = slack_web_client.chat_postMessage(
@@ -38,6 +39,7 @@ def identify_yourself(user_id: str, channel: str):
         """
     )
 
+# creating a new account
 def add_new_user(user_id: str, channel: str):
     balance = BotBank.new_user(user_id)
     response = slack_web_client.chat_postMessage(
@@ -45,6 +47,7 @@ def add_new_user(user_id: str, channel: str):
         text=f"{user_id} has {balance} points"
     )
 
+# Debug respond to an event so you can see what is happening directly in slack.
 def debug_event(channel: str, payload):
     event = payload.get("event", {})
     user = event.get("user", {})
@@ -61,21 +64,9 @@ def debug_event(channel: str, payload):
 # Here we'll link the onboarding_message callback to the 'team_join' event.
 @slack_events_adapter.on("team_join")
 def add_user(payload):
-    """Create and send an onboarding welcome message to new users. Save the
-    time stamp of this message so we can update this message in the future.
-    """
+    # not implemented, debug event
     event = payload.get("event", {})
-
-    # Get the id of the Slack user associated with the incoming event
-    user_id = event.get("user", {}).get("id")
-
-    # Open a DM with the new user.
-    response = slack_web_client.conversations_open(users=user_id)
-    channel = response["channel"]["id"]
-
-    # Post the onboarding message.
-    # identify_yourself(user_id, channel)
-    debug_event(channel, payload)
+    print(event)
 
 
 # ============= Reaction Added Events ============= #
@@ -87,28 +78,10 @@ def update_emoji(payload):
     """Update the onboarding welcome message after receiving a "reaction_added"
     event from Slack. Update timestamp for welcome message as well.
     """
+    # not implemented, leaving as an example if I want to handle reactions
     event = payload.get("event", {})
+    print(event)
 
-    channel_id = event.get("item", {}).get("channel")
-    user_id = event.get("user")
-
-    if channel_id not in onboarding_tutorials_sent:
-        return
-
-    # Get the original tutorial sent.
-    onboarding_tutorial = onboarding_tutorials_sent[channel_id][user_id]
-
-    # Mark the reaction task as completed.
-    onboarding_tutorial.reaction_task_completed = True
-
-    # Get the new message payload
-    message = onboarding_tutorial.get_message_payload()
-
-    # Post the updated message in Slack
-    updated_message = slack_web_client.chat_update(**message)
-
-    # Update the timestamp saved on the onboarding tutorial object
-    onboarding_tutorial.timestamp = updated_message["ts"]
 
 
 # =============== Pin Added Events ================ #
@@ -116,28 +89,9 @@ def update_emoji(payload):
 # Here we'll link the update_pin callback to the 'reaction_added' event.
 @slack_events_adapter.on("pin_added")
 def update_pin(payload):
-    """Update the onboarding welcome message after receiving a "pin_added"
-    event from Slack. Update timestamp for welcome message as well.
-    """
+    # not implemented, leaving as an example if I want to handle pins
     event = payload.get("event", {})
-
-    channel_id = event.get("channel_id")
-    user_id = event.get("user")
-
-    # Get the original tutorial sent.
-    onboarding_tutorial = onboarding_tutorials_sent[channel_id][user_id]
-
-    # Mark the pin task as completed.
-    onboarding_tutorial.pin_task_completed = True
-
-    # Get the new message payload
-    message = onboarding_tutorial.get_message_payload()
-
-    # Post the updated message in Slack
-    updated_message = slack_web_client.chat_update(**message)
-
-    # Update the timestamp saved on the onboarding tutorial object
-    onboarding_tutorial.timestamp = updated_message["ts"]
+    print(event)
 
 
 # ============== Message Events ============= #
@@ -145,15 +99,16 @@ def update_pin(payload):
 # Here we'll link the message callback to the 'message' event.
 @slack_events_adapter.on("message")
 def message(payload):
+    # not implemented, leaving as an example if I want to handle dms
     event = payload.get("event", {})
     print(event)
-#    """Display the onboarding welcome message after receiving a message
-#    that contains "start".
-#    """
 
+# check if user is an admin of the workspace for access controlled commands.
 def is_admin(user_id):
     return slack_web_client.users_info(user=user_id).get("user").get("is_admin")
 
+# ============== Mention Events ============= #
+# here's the giant function of everything that happens when you @Bot
 @slack_events_adapter.on("app_mention")
 def handle_message(payload):
     event = payload.get("event", {})
